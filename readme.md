@@ -1,2 +1,2 @@
 Code for Project "Nachhaltigkeit im Tragwerksentwurf"
-2024, ETHZ
+kfm research group, ibk, ETHZ
