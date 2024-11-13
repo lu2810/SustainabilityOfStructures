@@ -1,3 +1,5 @@
+# File enthält Code für die Strukturanalyse (Bauteil- und Querschnittsanalyse)
+
 # Abgebildete Materialien:
 # - Beton
 # - Betonstahl
