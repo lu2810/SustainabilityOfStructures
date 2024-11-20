@@ -23,6 +23,7 @@ import sqlite3  # import modul for SQLite
 import numpy as np
 
 class Wood:
+    # defines properties of wooden material
     def __init__(self, mech_prop, database):  # retrieve basic mechanical data from database
         self.mech_prop = mech_prop
         connection = sqlite3.connect(database)
@@ -48,6 +49,7 @@ class Wood:
 
 
 class ReadyMixedConcrete:
+    # defines properties of concrete material
     def __init__(self, mech_prop, database):  # retrieve basic mechanical data from database (self, table,
         self.ec2d = float()
         self.tcd = float()
@@ -75,6 +77,7 @@ class ReadyMixedConcrete:
 
 
 class SteelReinforcingBar:
+    # defines properties of reinforcement  material
     def __init__(self, mech_prop, database):
         # retrieve basic mechanical data from database (self, table, database name)
         self.mech_prop = mech_prop
@@ -97,7 +100,7 @@ class SteelReinforcingBar:
 
 
 class SupStrucRectangular:
-    # defines cross section dimensions and has methods to calculate static properties of rectangular,
+    # defines cross-section dimensions and has methods to calculate static properties of rectangular,
     # non-cracked sections
     def __init__(self, b, h, phi=0):  # create a rectangular timber object
         self.b = b  # width [m]
@@ -107,14 +110,14 @@ class SupStrucRectangular:
         self.phi = phi
 
     def calc_area(self):
-        #  in:
+        #  in: width b [m], height h [m]
         #  out: area [m^2]
         a_brutt = self.b * self.h
         return a_brutt
 
     def calc_moment_of_inertia(self):
-        #  in:
-        #  out: Iy [m^4]
+        #  in: width b [m], height h [m]
+        #  out: second moment of inertia Iy [m^4]
         iy = self.b * self.h ** 3 / 12
         return iy
 
@@ -140,37 +143,42 @@ class SupStrucRectangular:
 
 
 class RectangularWood(SupStrucRectangular):
+    # defines properties of rectangular, wooden cross-section
     def __init__(self, wood_type, b, h, phi=0.6):  # create a rectangular timber object
         super().__init__(b, h, phi)
         self.wood_type = wood_type
-        self.mu, self.vu = self.calc_strength_elast(wood_type.fmd, wood_type.fvd)
+        mu_el, vu_el = self.calc_strength_elast(wood_type.fmd, wood_type.fvd)
+        self.mu_max, self.mu_min = [mu_el, mu_el]
+        self.vu = vu_el
         self.qs_class_n, self.qs_class_p = [3, 3]
         self.g0k = self.calc_weight(wood_type.weight)
-        self.mu_max = self.mu
-        self.mu_min = self.mu
+        self.ei1 = self.wood_type.Emmean*self.iy  # elastic stiffness concrete (uncracked behaviour) [Nm^2]
         self.co2 = self.a_brutt * self.wood_type.GWP * self.wood_type.density  # [kg_CO2_eq/m]
         self.cost = self.a_brutt * self.wood_type.cost
-        self.ei1 = self.wood_type.Emmean*self.iy  # elastic stiffness concrete (uncracked behaviour) [Nm^2]
 
 class RectangularConcrete(SupStrucRectangular):
-    def __init__(self, concrete_type, rebar_type, b, h, di_xu, s_xu, di_xo, s_xo, phi=2.0, c_nom=0.03):  # create a rectangular timber object
+    # defines properties of rectangular, reinforced concrete cross-section
+    def __init__(self, concrete_type, rebar_type, b, h, di_xu, s_xu, di_xo, s_xo, phi=2.0, c_nom=0.03):
+        # create a rectangular timber object
         super().__init__(b, h, phi)
         self.concrete_type = concrete_type
         self.rebar_type = rebar_type
         self.c_nom = c_nom
         self.bw = [[di_xu, s_xu],[di_xo, s_xo]]
+        # self.bw_bg = XXXXXXXXXXToDoXXXXXXXXXX
         [self.d, self.ds] = self.calc_d()
         [self.mu_max, self.x_p, self.as_p, self.qs_class_p] = self.calc_mu('pos')
         [self.mu_min, self.x_n, self.as_n, self.qs_class_n] = self.calc_mu('neg')
-        # self.vu = self.calc_strength_elast(wood_type.fmd, wood_type.fvd)
+        # self.vu = self.calc_shear_resistance() XXXXXXXXXXToDoXXXXXXXXXX
         self.g0k = self.calc_weight(concrete_type.weight)
-        a_s_tot = self.as_p + self.as_n
+        a_s_tot = self.as_p + self.as_n  # add area of stirrups XXXXXXXXXXToDoXXXXXXXXXX
         co2_rebar = a_s_tot * self.rebar_type.GWP * self.rebar_type.density  # [kg_CO2_eq/m]
         co2_concrete = (self.a_brutt-a_s_tot) * self.concrete_type.GWP * self.concrete_type.density  # [kg_CO2_eq/m]
-        self.co2 = co2_rebar + co2_concrete
-        self.cost = a_s_tot * self.rebar_type.cost + (self.a_brutt-a_s_tot) * self.concrete_type.cost + self.concrete_type.cost2
         self.ei1 = self.concrete_type.Ecm*self.iy  # elastic stiffness concrete (uncracked behaviour) [Nm^2]
-    #   self.ei2 = # to be defined
+        self.co2 = co2_rebar + co2_concrete
+        self.cost = (a_s_tot * self.rebar_type.cost + (self.a_brutt-a_s_tot) * self.concrete_type.cost
+                     + self.concrete_type.cost2)
+    #   self.ei2 = # XXXXXXXXXXToDoXXXXXXXXXX
 
     def calc_d(self):
         d = self.h - self.c_nom - self.bw[0][0]/2
