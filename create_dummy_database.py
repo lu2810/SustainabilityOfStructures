@@ -1,5 +1,5 @@
 # file creates a dummy database for testing the structure analysis code
-
+# units: [m], [kg], [s], [N], [CHF]
 import sqlite3
 
 def create_database(data_base_name):
@@ -36,23 +36,23 @@ def create_database(data_base_name):
 
     # fill dummy data for concrete C25/30 into table products
     sql_command = """INSERT INTO products (EPD_ID, source, EPD_date, valid_from, valid_to, product_name, material, kind,
-     cement, mech_prop, density, GWP, cost, cost2)
-        VALUES (NULL, "Betonsortenrechner", NULL, NULL, NULL, "NPK B RC-C50", "concrete", "structural",
-         "CEM II/B CH-Mix", "C25/30", 2190, 98, 220, 50);"""
+         cement, mech_prop, density, GWP, cost, cost2)
+            VALUES (NULL, "Betonsortenrechner", NULL, NULL, NULL, "NPK B RC-C50", "concrete", "structural",
+             "CEM II/B CH-Mix", "C25/30", 2190, 98e-3, 220, 50);"""
     cursor.execute(sql_command)
 
     # fill dummy data for reinforcing steel B500B into table products
     sql_command = """INSERT INTO products (EPD_ID, source, EPD_date, valid_from, valid_to, product_name, material, kind,
-     cement, mech_prop, density, GWP, cost, cost2)
-        VALUES (NULL, "KBOB", NULL, NULL, NULL, "Betonstahl KBOB", "metal", "reinforcing steel",
-         NULL, "B500B", 7850, 773, 11775, NULL);"""
+         cement, mech_prop, density, GWP, cost, cost2)
+            VALUES (NULL, "KBOB", NULL, NULL, NULL, "Betonstahl KBOB", "metal", "reinforcing steel",
+             NULL, "B500B", 7850, 773e-3, 11775, NULL);"""
     cursor.execute(sql_command)
 
     # fill dummy data for timber GL24h into table products
     sql_command = """INSERT INTO products (EPD_ID, source, EPD_date, valid_from, valid_to, product_name, material, kind,
-     cement, mech_prop, density, GWP, cost, cost2)
-        VALUES (NULL, "KBOB", NULL, NULL, NULL, "Brettschichtholz KBOB", "timber", "glulam",
-         NULL, "GL24h", 439, 253, 1200, NULL);"""
+         cement, mech_prop, density, GWP, cost, cost2)
+            VALUES (NULL, "KBOB", NULL, NULL, NULL, "Brettschichtholz KBOB", "timber", "glulam",
+             NULL, "GL24h", 439, 253e-3, 1200, 15);"""
     cursor.execute(sql_command)
 
     try:
@@ -77,22 +77,22 @@ def create_database(data_base_name):
     # fill data for concrete C25/30 into table material_prop
     sql_command = """INSERT INTO material_prop (Mat_ID, name, strength_comp, strength_tens, strength_bend,
      strength_shea, E_modulus, density_load)
-        VALUES (NULL, "C25/30", 25 , 2.6, NULL,
-        NULL, 30000, 25);"""
+        VALUES (NULL, "C25/30", 25e6 , 2.6e6, NULL,
+        NULL, 30e9, 25e3);"""
     cursor.execute(sql_command)
 
     # fill data for B500B into table material_prop
     sql_command = """INSERT INTO material_prop (Mat_ID, name, strength_comp, strength_tens, strength_bend,
      strength_shea, E_modulus, density_load)
-        VALUES (NULL, "B500B", 500 , 500, NULL,
-        NULL, 205000, NULL);"""
+        VALUES (NULL, "B500B", 500e6 , 500e6, NULL,
+        NULL, 205e9, NULL);"""
     cursor.execute(sql_command)
 
     # fill data for timber GL24h into table material_prop
     sql_command = """INSERT INTO material_prop (Mat_ID, name, strength_comp, strength_tens, strength_bend,
      strength_shea, E_modulus, density_load)
-        VALUES (NULL, "GL24h", NULL , NULL, 24,
-        1.8, 11000, 5);"""
+        VALUES (NULL, "GL24h", NULL , NULL, 24e6,
+        1.8e6, 11e9, 5e3);"""
     cursor.execute(sql_command)
 
     # delete existing floor structure property table
@@ -114,22 +114,22 @@ def create_database(data_base_name):
 
     # fill data for parquet into table floor_struc_mat
     sql_command = """INSERT INTO floor_struc_prop (Mat_ID, name, h_fix, density, weight, GWP)
-        VALUES (NULL, "Parkett 2-Schicht werkversiegelt, 11 mm", 0.011, 555 , 8, 1279);"""
+        VALUES (NULL, "Parkett 2-Schicht werkversiegelt, 11 mm", 0.011, 555 , 8e3, 1279e-3);"""
     cursor.execute(sql_command)
 
     # fill data for screed into table floor_struc_mat
     sql_command = """INSERT INTO floor_struc_prop (Mat_ID, name, h_fix, density, weight, GWP)
-        VALUES (NULL, "Unterlagsboden Zement, 85 mm", 0.085, 1850, 22, 120);"""
+        VALUES (NULL, "Unterlagsboden Zement, 85 mm", 0.085, 1850, 22e3, 120e-3);"""
     cursor.execute(sql_command)
 
     # fill data for impact sound insulation into table floor_struc_mat
     sql_command = """INSERT INTO floor_struc_prop (Mat_ID, name, h_fix, density, weight, GWP)
-        VALUES (NULL, "Glaswolle", NULL, 80, 0.8, 1100);"""
+        VALUES (NULL, "Glaswolle", NULL, 80, 0.8e3, 1100e-3);"""
     cursor.execute(sql_command)
 
     # fill data for grit into table floor_struc_mat
     sql_command = """INSERT INTO floor_struc_prop (Mat_ID, name, h_fix, density, weight, GWP)
-        VALUES (NULL, "Kies gebrochen", NULL, 2000, 20, 18);"""
+        VALUES (NULL, "Kies gebrochen", NULL, 2000, 20e3, 18e-3);"""
     cursor.execute(sql_command)
 
     # safe changes in database

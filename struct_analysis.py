@@ -1,4 +1,5 @@
 # File enthält Code für die Strukturanalyse (Bauteil- und Querschnittsanalyse)
+# units: [m], [kg], [s], [N], [CHF]
 
 # Abgebildete Materialien:
 # - Beton
@@ -23,7 +24,6 @@ import numpy as np
 
 class Wood:
     def __init__(self, mech_prop, database):  # retrieve basic mechanical data from database
-        self.fmd = None
         self.mech_prop = mech_prop
         connection = sqlite3.connect(database)
         cursor = connection.cursor()
@@ -34,10 +34,11 @@ class Wood:
         result = cursor.fetchall()
         self.fmk, self.fvd, self.Emmean, self.weight = result[0]
         # get GWP properties from database
-        inquiry = "SELECT density, GWP, cost FROM products WHERE mech_prop="+mech_prop
+        inquiry = "SELECT density, GWP, cost, cost2 FROM products WHERE mech_prop="+mech_prop
         cursor.execute(inquiry)
         result = cursor.fetchall()
-        self.density, self.GWP, self.cost = result[0]
+        self.density, self.GWP, self.cost, self.cost2 = result[0]
+        self.fmd = float()
 
     def get_design_values(self, gamma_m=1.7, eta_m=1, eta_t=1, eta_w=1):  # calculate design values
         if self.mech_prop[1:3] == "GL":
@@ -48,9 +49,9 @@ class Wood:
 
 class ReadyMixedConcrete:
     def __init__(self, mech_prop, database):  # retrieve basic mechanical data from database (self, table,
-        self.ec2d = None
-        self.tcd = None
-        self.fcd = None
+        self.ec2d = float()
+        self.tcd = float()
+        self.fcd = float()
         self.mech_prop = mech_prop
         connection = sqlite3.connect(database)
         cursor = connection.cursor()
@@ -67,7 +68,7 @@ class ReadyMixedConcrete:
         self.density, self.GWP, self.cost, self.cost2 = result[0]
 
     def get_design_values(self, gamma_c=1.5, eta_t=1):  # calculate design values
-        eta_fc = min((30/self.fck) ** (1/3), 1)  # SIA 262, 4.2.1.2, Formel (26)
+        eta_fc = min((30e6/self.fck) ** (1/3), 1)  # SIA 262, 4.2.1.2, Formel (26)
         self.fcd = self.fck * eta_fc * eta_t / gamma_c  # SIA 262, 2.3.2.3, Formel (2)
         self.tcd = 0.3 * eta_t * self.fck ** 0.5/gamma_c  # SIA 262, 2.3.2.4, Formel (3)
         self.ec2d = 0.003  # SIA 262, 4.2.4, Tabelle 8
@@ -76,7 +77,6 @@ class ReadyMixedConcrete:
 class SteelReinforcingBar:
     def __init__(self, mech_prop, database):
         # retrieve basic mechanical data from database (self, table, database name)
-        self.fsd = None
         self.mech_prop = mech_prop
         connection = sqlite3.connect(database)
         cursor = connection.cursor()
@@ -90,6 +90,7 @@ class SteelReinforcingBar:
         cursor.execute(inquiry)
         result = cursor.fetchall()
         self.density, self.GWP, self.cost = result[0]
+        self.fsd = float()
 
     def get_design_values(self, gamma_s=1.15):  # calculate design values
         self.fsd = self.fsk/gamma_s  # SIA 262, 2.3.2.5, Formel (4)
@@ -118,22 +119,22 @@ class SupStrucRectangular:
         return iy
 
     def calc_strength_elast(self, fy, ty):
-        #  in: yielding strength fy [MPa], shear strength ty [MPa]
-        #  out: elastic bending resistance [kNm], elastic shear resistance [kN]
-        mu_el = self.iy * fy * 2 / self.h * 1e3
-        vu_el = self.b * self.h * ty / 1.5 * 1e3
+        #  in: yielding strength fy [Pa], shear strength ty [Pa]
+        #  out: elastic bending resistance [Nm], elastic shear resistance [N]
+        mu_el = self.iy * fy * 2 / self.h
+        vu_el = self.b * self.h * ty / 1.5
         return mu_el, vu_el
 
     def calc_strength_plast(self, fy, ty):
-        #  in: yielding strength fy [MPa], shear strength ty [MPa]
-        #  out: plastic bending resistance [kNm], plastic shear resistance [kN]
-        mu_pl = self.b * self.h ** 2 * fy / 4 * 1e3
-        vu_pl = self.b * self.h * ty * 1e3
+        #  in: yielding strength fy [Pa], shear strength ty [Pa]
+        #  out: plastic bending resistance [Nm], plastic shear resistance [N]
+        mu_pl = self.b * self.h ** 2 * fy / 4
+        vu_pl = self.b * self.h * ty
         return mu_pl, vu_pl
 
     def calc_weight(self, spec_weight):
-        #  in: specific weight [kN/m^3]
-        #  out: weight of cross section per m length [kN/m]
+        #  in: specific weight [N/m^3]
+        #  out: weight of cross section per m length [N/m]
         w = spec_weight * self.a_brutt
         return w
 
@@ -147,9 +148,9 @@ class RectangularWood(SupStrucRectangular):
         self.g0k = self.calc_weight(wood_type.weight)
         self.mu_max = self.mu
         self.mu_min = self.mu
-        self.co2 = self.a_brutt * self.wood_type.GWP * self.wood_type.density * 1e-3
+        self.co2 = self.a_brutt * self.wood_type.GWP * self.wood_type.density  # [kg_CO2_eq/m]
         self.cost = self.a_brutt * self.wood_type.cost
-        self.ei1 = self.wood_type.Emmean*self.iy*1000  # elastic stiffness concrete (uncracked behaviour) [kNm^2]
+        self.ei1 = self.wood_type.Emmean*self.iy  # elastic stiffness concrete (uncracked behaviour) [Nm^2]
 
 class RectangularConcrete(SupStrucRectangular):
     def __init__(self, concrete_type, rebar_type, b, h, di_xu, s_xu, di_xo, s_xo, phi=2.0, c_nom=0.03):  # create a rectangular timber object
@@ -164,11 +165,11 @@ class RectangularConcrete(SupStrucRectangular):
         # self.vu = self.calc_strength_elast(wood_type.fmd, wood_type.fvd)
         self.g0k = self.calc_weight(concrete_type.weight)
         a_s_tot = self.as_p + self.as_n
-        co2_rebar = a_s_tot * self.rebar_type.GWP * self.rebar_type.density * 1e-3
-        co2_concrete = (self.a_brutt-a_s_tot) * self.concrete_type.GWP * self.concrete_type.density * 1e-3
+        co2_rebar = a_s_tot * self.rebar_type.GWP * self.rebar_type.density  # [kg_CO2_eq/m]
+        co2_concrete = (self.a_brutt-a_s_tot) * self.concrete_type.GWP * self.concrete_type.density  # [kg_CO2_eq/m]
         self.co2 = co2_rebar + co2_concrete
         self.cost = a_s_tot * self.rebar_type.cost + (self.a_brutt-a_s_tot) * self.concrete_type.cost + self.concrete_type.cost2
-        self.ei1 = self.concrete_type.Ecm*self.iy*1000 # elastic stiffness concrete (uncracked behaviour) [kNm^2]
+        self.ei1 = self.concrete_type.Ecm*self.iy  # elastic stiffness concrete (uncracked behaviour) [Nm^2]
     #   self.ei2 = # to be defined
 
     def calc_d(self):
@@ -189,17 +190,17 @@ class RectangularConcrete(SupStrucRectangular):
         return mu, x, a_s, qs_klasse
 
     def mu_unsigned(self, di, s, d, b, fsd, fcd):
-        # units input: [m, m, m, m, N/mm^2, N/mm^2]
+        # units input: [m, m, m, m, N/m^2, N/m^2]
         a_s = np.pi * di ** 2 / (4 * s) * b  # [m^2]
         omega = a_s * fsd / (d * b * fcd)  # [-]
-        mu = a_s * fsd * d * (1-omega/2)*1e3  # [kNm]
+        mu = a_s * fsd * d * (1-omega/2)  # [Nm]
         x = omega * d / 0.85  # [m]
         if x/d <= 0.35:
             return mu, x, a_s, 1
         if x/d<=0.5:
             return mu, x, a_s, 2
         else:
-            return 0, x, a_s, 99 #Querschnitt hat ungenügendes Verformungsvermögen
+            return 0, x, a_s, 99  # Querschnitt hat ungenügendes Verformungsvermögen
 
 
 class MatLayer:  # create a material layer
@@ -221,9 +222,9 @@ class MatLayer:  # create a material layer
             self.weight = weight
         else:
             self.density = roh_input
-            self.weight = roh_input/100
-        self.gk = self.weight * self.h  # weight per area in kN/m^2
-        self.co2 = self.density * self.h * self. GWP/1000 # CO2-eq per area in kg-C02/m^2
+            self.weight = roh_input*10
+        self.gk = self.weight * self.h  # weight per area in N/m^2
+        self.co2 = self.density * self.h * self. GWP  # CO2-eq per area in kg-C02/m^2
 
 
 class FloorStruc:  # create a floor structure
@@ -262,6 +263,7 @@ class Member1D:
         self.gk = self.g0k + self.g1k + self.g2k
         self.mu_max = section.mu_max
         self.mu_min = section.mu_min
+        self.qu = []
         self.qk_zul_gzt = []
         self.q_rare = self.gk + self.qk
         self.q_freq = self.gk + self.psi[1]*self.qk

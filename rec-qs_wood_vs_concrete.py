@@ -5,11 +5,11 @@ import create_dummy_database  # file for creating a "dummy database", as long as
 import struct_analysis  # file with code for structural analysis
 from scipy.optimize import direct
 from scipy.optimize import basinhopping
-from scipy.optimize import minimize  # importiere Minimierungsfunktion aus dem SyiPy paket
+from scipy.optimize import minimize  # importiere Minimierungsfunktion aus dem SyiPy-Paket
 import matplotlib.pyplot as plt
 
-# max. number of iterations per optimization. Fast results: max_iterations = 100, good results: max iterations = 1000
-max_iterations = 100
+# max. number of iterations per optimization. Fast results: max_iterations = 50, good results: max iterations = 1000
+max_iterations = 50
 
 # create dummy-database
 database_name = "dummy_sustainability.db"  # define database name
@@ -62,9 +62,9 @@ def rc_rqs(var, add_arg):
         # return co2 rsp. h of cross-section with penalty if q_adm =! q_k
         penalty = member.qk_zul_gzt - member.qk
         if to_opt == "GWP":
-            return member.co2*(1+10*abs(penalty))
+            return member.co2*(1+0.1*abs(penalty))
         elif to_opt == "h":
-            return h * (1+1*abs(penalty))
+            return h * (1+0.001*abs(penalty))
 
     elif criterion == "SLS1": # optimize service limit state (deflections)
         d1, d2, d3 = [member.w_install_adm - member.w_install, member.w_use_adm - member.w_use,
@@ -97,7 +97,6 @@ def opt_gzt_rc_rqs(system, to_opt="GWP", criterion="ULS"):
     h, di_xu = opt.x
     optimized_section = struct_analysis.RectangularConcrete(concrete1, reinfsteel1, b, h, di_xu, s_xu, di_xo, s_xo)
     return optimized_section
-
 
 # function used for optimizing wooden section in terms of height (equals co2)
 def wd_rqs_h(h, args):
