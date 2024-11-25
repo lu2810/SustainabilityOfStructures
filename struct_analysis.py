@@ -169,7 +169,7 @@ class RectangularConcrete(SupStrucRectangular):
         [self.d, self.ds] = self.calc_d()
         [self.mu_max, self.x_p, self.as_p, self.qs_class_p] = self.calc_mu('pos')
         [self.mu_min, self.x_n, self.as_n, self.qs_class_n] = self.calc_mu('neg')
-        # self.vu = self.calc_shear_resistance() XXXXXXXXXXToDoXXXXXXXXXX
+        # [self.vu, self.as_bg] = self.calc_shear_resistance() XXXXXXXXXXToDoXXXXXXXXXX
         self.g0k = self.calc_weight(concrete_type.weight)
         a_s_tot = self.as_p + self.as_n  # add area of stirrups XXXXXXXXXXToDoXXXXXXXXXX
         co2_rebar = a_s_tot * self.rebar_type.GWP * self.rebar_type.density  # [kg_CO2_eq/m]
@@ -205,7 +205,7 @@ class RectangularConcrete(SupStrucRectangular):
         x = omega * d / 0.85  # [m]
         if x/d <= 0.35:
             return mu, x, a_s, 1
-        if x/d<=0.5:
+        if x/d <= 0.5:
             return mu, x, a_s, 2
         else:
             return 0, x, a_s, 99  # Querschnitt hat ungenügendes Verformungsvermögen
@@ -232,7 +232,7 @@ class MatLayer:  # create a material layer
             self.density = roh_input
             self.weight = roh_input*10
         self.gk = self.weight * self.h  # weight per area in N/m^2
-        self.co2 = self.density * self.h * self. GWP  # CO2-eq per area in kg-C02/m^2
+        self.co2 = self.density * self.h * self.GWP  # CO2-eq per area in kg-C02/m^2
 
 
 class FloorStruc:  # create a floor structure
