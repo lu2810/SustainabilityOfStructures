@@ -22,6 +22,7 @@
 import sqlite3  # import modul for SQLite
 import numpy as np
 
+
 class Wood:
     # defines properties of wooden material
     def __init__(self, mech_prop, database):  # retrieve basic mechanical data from database
@@ -59,7 +60,7 @@ class ReadyMixedConcrete:
         cursor = connection.cursor()
         # get mechanical properties from database
         inquiry = ("SELECT strength_comp, strength_tens, E_modulus, density_load FROM material_prop WHERE name="
-                   +mech_prop)
+                   + mech_prop)
         cursor.execute(inquiry)
         result = cursor.fetchall()
         self.fck, self.fctm, self.Ecm, self.weight = result[0]
@@ -98,6 +99,19 @@ class SteelReinforcingBar:
     def get_design_values(self, gamma_s=1.15):  # calculate design values
         self.fsd = self.fsk/gamma_s  # SIA 262, 2.3.2.5, Formel (4)
 
+
+# class Section:
+#     # contains section properties like weight, resistance and stiffness
+#     def __init__(self):  # create a general section object
+#         self.mu_max = float
+#         self.mu_min = float
+#         self.vu = float
+#         self.qs_class_n = int
+#         self.qs_class_p = int
+#         self.g0k = float
+#         self.ei1 = float
+#         self.co2 = float
+#         self.cost = float
 
 class SupStrucRectangular:
     # defines cross-section dimensions and has methods to calculate static properties of rectangular,
@@ -156,6 +170,7 @@ class RectangularWood(SupStrucRectangular):
         self.co2 = self.a_brutt * self.wood_type.GWP * self.wood_type.density  # [kg_CO2_eq/m]
         self.cost = self.a_brutt * self.wood_type.cost
 
+
 class RectangularConcrete(SupStrucRectangular):
     # defines properties of rectangular, reinforced concrete cross-section
     def __init__(self, concrete_type, rebar_type, b, h, di_xu, s_xu, di_xo, s_xo, phi=2.0, c_nom=0.03):
@@ -164,7 +179,7 @@ class RectangularConcrete(SupStrucRectangular):
         self.concrete_type = concrete_type
         self.rebar_type = rebar_type
         self.c_nom = c_nom
-        self.bw = [[di_xu, s_xu],[di_xo, s_xo]]
+        self.bw = [[di_xu, s_xu], [di_xo, s_xo]]
         # self.bw_bg = XXXXXXXXXXToDoXXXXXXXXXX
         [self.d, self.ds] = self.calc_d()
         [self.mu_max, self.x_p, self.as_p, self.qs_class_p] = self.calc_mu('pos')
@@ -194,10 +209,12 @@ class RectangularConcrete(SupStrucRectangular):
         elif sign == 'neg':
             [mu, x, a_s, qs_klasse] = self.mu_unsigned(self.bw[1][0], self.bw[1][1], self.ds, b, fsd, fcd)
         else:
-            print ("sigen of moment resistance must be 'neg' or 'pos'")
+            [mu, x, a_s, qs_klasse] = [0, 0, 0, 0]
+            print("sigen of moment resistance has to be 'neg' or 'pos'")
         return mu, x, a_s, qs_klasse
 
-    def mu_unsigned(self, di, s, d, b, fsd, fcd):
+    @staticmethod
+    def mu_unsigned(di, s, d, b, fsd, fcd):
         # units input: [m, m, m, m, N/m^2, N/m^2]
         a_s = np.pi * di ** 2 / (4 * s) * b  # [m^2]
         omega = a_s * fsd / (d * b * fcd)  # [-]
@@ -208,7 +225,7 @@ class RectangularConcrete(SupStrucRectangular):
         if x/d <= 0.5:
             return mu, x, a_s, 2
         else:
-            return 0, x, a_s, 99  # Querschnitt hat ungenügendes Verformungsvermögen
+            return mu, x, a_s, 99  # Querschnitt hat ungenügendes Verformungsvermögen
 
 
 class MatLayer:  # create a material layer
@@ -252,38 +269,38 @@ class FloorStruc:  # create a floor structure
 class BeamSimpleSup:
     def __init__(self, length):
         self.l_tot = length
-        self.li_max = self.l_tot # max span (used for calculation of admissible deflections)
+        self.li_max = self.l_tot  # max span (used for calculation of admissible deflections)
         self.alpha_m = [0, 1/8]
-        self.qs_cl_erf = [99, 99] # Querschnittsklasse: 1 == plast, 99 == keine Anforderung (elast)
+        self.qs_cl_erf = [99, 99]  # Querschnittsklasse: 1 == plast, 99 == keine Anforderung (elast)
         self.alpha_w = 5/384
 
+
 class Member1D:
-    def __init__(self, section, floorstruc, system, g2k=0.0, qk=2.0, psi0=0.7, psi1=0.5, psi2=0.3,
-                 install="ductile", lw_install=350, lw_use=350, lw_app=300):
+    def __init__(self, section, system, floorstruc, requirements, g2k=0.0, qk=2.0, psi0=0.7, psi1=0.5, psi2=0.3):
         self.section = section
-        self.floorstruc = floorstruc
         self.system = system
+        self.floorstruc = floorstruc
+        self.requirements = requirements
         self.g0k = self.section.g0k
         self.g1k = self.floorstruc.gk_area
         self.g2k = g2k
+        self.gk = self.g0k + self.g1k + self.g2k
         self.qk = qk
         self.psi = [psi0, psi1, psi2]
-        self.gk = self.g0k + self.g1k + self.g2k
-        self.mu_max = section.mu_max
-        self.mu_min = section.mu_min
-        self.qu = []
-        self.qk_zul_gzt = []
         self.q_rare = self.gk + self.qk
         self.q_freq = self.gk + self.psi[1]*self.qk
         self.q_per = self.gk + self.psi[2]*self.qk
-        self.w_install_adm = self.system.li_max/lw_install
-        self.w_use_adm = self.system.li_max / lw_use
-        self.w_app_adm = self.system.li_max / lw_app
-        # calculation of deflections (uncracked cross-section, method for cracked cross-section is not implemented jet.
-        if install == "ductile":
+        self.w_install_adm = self.system.li_max/self.requirements.lw_install
+        self.w_use_adm = self.system.li_max/self.requirements.lw_use
+        self.w_app_adm = self.system.li_max/self.requirements.lw_app
+        self.qu = self.calc_qu()
+        self.qk_zul_gzt = float
+
+        # calculation of deflections (uncracked cross-section, method for cracked cross-section is not implemented jet)
+        if self.requirements.install == "ductile":
             self.w_install = self.system.alpha_w * (
                         self.q_freq + self.q_per * (self.section.phi - 1)) * self.system.l_tot ** 4 / self.section.ei1
-        elif install == "brittle":
+        elif self.requirements.install == "brittle":
             self.w_install = self.system.alpha_w * (
                     self.q_rare + self.q_per * (self.section.phi - 1)) * self.system.l_tot ** 4 / self.section.ei1
         self.w_use = self.system.alpha_w * (
@@ -295,21 +312,29 @@ class Member1D:
     def calc_qu(self):
         # calculates maximal load qu in respect to bearing moment mu_max, mu_min and static system
         alpha_m = self.system.alpha_m
-        qs_class_erf = self.system.qs_cl_erf # z.B. [0, 2]
+        qs_class_erf = self.system.qs_cl_erf  # z.B. [0, 2]
         qs_class_vorh = [self.section.qs_class_n, self.section.qs_class_p]
 
         if min(alpha_m) == 0:
             if qs_class_vorh[1] <= qs_class_erf[1]:
-                self.qu = self.mu_max/(max(alpha_m)*self.system.l_tot ** 2)
+                qu = self.section.mu_max/(max(alpha_m)*self.system.l_tot ** 2)
             else:
-                self.qu = 0
+                qu = 0
         else:
             if qs_class_vorh[0] <= qs_class_erf[0] & qs_class_vorh[1] <= qs_class_erf[1]:
-                self.qu = min(self.mu_max/(max(alpha_m)*self.system.l_tot ** 2),
-                          self.mu_min/(min(alpha_m)*self.system.l_tot ** 2))
+                qu = min(self.section.mu_max/(max(alpha_m)*self.system.l_tot ** 2), self.section.mu_min /
+                         (min(alpha_m)*self.system.l_tot ** 2))
             else:
-                self.qu = 0
+                qu = 0
+        return qu
 
     def calc_qk_zul_gzt(self, gamma_g=1.35, gamma_q=1.5):
         self.qk_zul_gzt = (self.qu - gamma_g * self.gk)/gamma_q
 
+
+class Requirements:
+    def __init__(self, install="ductile", lw_install=350, lw_use=350, lw_app=300):
+        self.install = install
+        self.lw_install = lw_install
+        self.lw_use = lw_use
+        self.lw_app = lw_app
