@@ -7,7 +7,7 @@ import struct_optimization  # file with code for structural optimization
 import matplotlib.pyplot as plt
 
 # max. number of iterations per optimization. Fast results: max_iterations = 50, good results: max iterations = 1000
-max_iter = 1000
+# max_iter = 1000
 
 # create dummy-database
 database_name = "dummy_sustainability.db"  # define database name
@@ -31,7 +31,7 @@ section_rc0 = struct_analysis.RectangularConcrete(concrete1, reinfsteel1, 1.0, 0
 bodenaufbau_brettstappeldecke = [["'Parkett 2-Schicht werkversiegelt, 11 mm'", False, False],
                                  ["'Unterlagsboden Zement, 85 mm'", False, False], ["'Glaswolle'", 0.03, False],
                                  ["'Kies gebrochen'", 0.12, False]]
-bodenaufbau_bs = struct_analysis.FloorStruc(bodenaufbau_brettstappeldecke, database_name)
+bodenaufbau_wd = struct_analysis.FloorStruc(bodenaufbau_brettstappeldecke, database_name)
 # create floor structure for solid reinforced concrete cross-section
 bodenaufbau_rcdecke = [["'Parkett 2-Schicht werkversiegelt, 11 mm'", False, False],
                        ["'Unterlagsboden Zement, 85 mm'", False, False],
@@ -39,180 +39,109 @@ bodenaufbau_rcdecke = [["'Parkett 2-Schicht werkversiegelt, 11 mm'", False, Fals
 bodenaufbau_rc = struct_analysis.FloorStruc(bodenaufbau_rcdecke, database_name)
 
 # define loads on member
-g2k = 0.75  # n.t. Einbauten
-qk = 2.0  # Nutzlast
+g2k = 0.75e3  # n.t. Einbauten
+qk = 2e3  # Nutzlast
 
 # define service limit state criteria
-requirements = struct_analysis.Requirements()
+req = struct_analysis.Requirements()
 
 # define system lengths for plot
-lengths = [4, 5, 6, 7, 8, 9, 10, 12]
+lengths = [3, 4, 5, 6, 7, 8, 9, 10, 12]
 
-#define content of plot
-to_plot = [["rc_rec", bodenaufbau_rc], ["wd_rec", bodenaufbau_bs ]]
-sectionlist = []
-#  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-# for i in to_plot:
-#      sectionlist.append(get_optimized_sections(i,XXXXXX))
-#  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#  define content of plot
+to_plot = [[section_rc0, bodenaufbau_rc], [section_wd0, bodenaufbau_wd]]
+criteria = ["ULS", "SLS1"]
+optima = ["GWP", "h"]
+plotted_data = [["h_struct", "[m]"], ["h_tot", "[m]"], ["GWP_struct", "[kg-CO2-eq]"], ["GWP_tot", "[kg-CO2-eq]"],
+                ["cost_struct", "[CHF]"]]
+member_list = []
+legend = []
 
-# create rectangular wood sections in function of length with optimized height
-section_list_wd_h_uls = []
-section_list_wd_h_sls1 = []
-section_list_rc_co2_uls = []
-section_list_rc_co2_sls1 = []
-section_list_rc_h_uls = []
-for i in lengths:
-    system = struct_analysis.BeamSimpleSup(i)
+# create plot data
+for i in to_plot:
+    for criterion in criteria:
+        for optimum in optima:
+            members = []
+            for length in lengths:
+                sys = struct_analysis.BeamSimpleSup(length)
+                member0 = struct_analysis.Member1D(i[0], sys, i[1], req, g2k, qk)
+                opt_section = struct_optimization.get_optimized_section(member0, criterion, optimum)
+                opt_member = struct_analysis.Member1D(opt_section, sys, i[1], req, g2k, qk)
+                members.append(opt_member)
+            member_list.append(members)
+            legend.append([i[0].section_type, criterion, optimum])
 
-    member_wd0 = struct_analysis.Member1D(section_wd0, system, bodenaufbau_bs, requirements, g2k, qk)
-    section_wd_h_uls = struct_optimization.opt_gzt_wd_rqs(member_wd0, "ULS")
-    section_list_wd_h_uls.append(section_wd_h_uls)
-    section_wd_h_sls1 = struct_optimization.opt_gzt_wd_rqs(member_wd0, "SLS1")
-    section_list_wd_h_sls1.append(section_wd_h_sls1)
-
-    member_rc0 = struct_analysis.Member1D(section_rc0, system, bodenaufbau_rc, requirements, g2k, qk)
-    section_rc_co2_uls = struct_optimization.opt_gzt_rc_rqs(member_rc0, "GWP", "ULS", max_iter)
-    section_list_rc_co2_uls.append(section_rc_co2_uls)
-
-    section_rc_co2_sls1 = struct_optimization.opt_gzt_rc_rqs(member_rc0, "GWP", "SLS1", max_iter)
-    section_list_rc_co2_sls1.append(section_rc_co2_sls1)
-
-    section_rc_h_uls = struct_optimization.opt_gzt_rc_rqs(member_rc0, "h", "ULS", max_iter)
-    section_list_rc_h_uls.append(section_rc_h_uls)
-
-# create plot data: height of wooden sections, criterion ULS, optimized for minimal height(equals minimal GWP)
-h_wd_h = []
-htot_wd_h = []
-co2_wd_h = []
-co2tot_wd_h = []
-cost_wd_h = []
-for section in section_list_wd_h_uls:
-    h_wd_h.append(section.h)
-    htot_wd_h.append(section.h+bodenaufbau_bs.h)
-    co2_wd_h.append(section.co2)
-    co2tot_wd_h.append(section.co2+bodenaufbau_bs.co2)
-    cost_wd_h.append(section.cost)
-
-# create plot data: height of wooden sections, criterion SLS, optimized for minimal height(equals minimal GWP)
-h_wd_h_sls1 = []
-htot_wd_h_sls1 = []
-co2_wd_h_sls1 = []
-co2tot_wd_h_sls1 = []
-cost_wd_h_sls1 = []
-for section in section_list_wd_h_sls1:
-    h_wd_h_sls1.append(section.h)
-    htot_wd_h_sls1.append(section.h+bodenaufbau_bs.h)
-    co2_wd_h_sls1.append(section.co2)
-    co2tot_wd_h_sls1.append(section.co2+bodenaufbau_bs.co2)
-    cost_wd_h_sls1.append(section.cost)
-
-# create plot data: height of reinforced concrete sections, criterion ULS, optimized for minimal GWP
-h_rc_co2 = []
-htot_rc_co2 = []
-co2_rc_co2 = []
-co2tot_rc_co2 = []
-cost_rc_co2 = []
-for section in section_list_rc_co2_uls:
-    h_rc_co2.append(section.h)
-    htot_rc_co2.append(section.h+bodenaufbau_rc.h)
-    co2_rc_co2.append(section.co2)
-    co2tot_rc_co2.append(section.co2+bodenaufbau_rc.co2)
-    cost_rc_co2.append(section.cost)
-
-# create plot data: height of reinforced concrete sections, criterion ULS, optimized for minimal GWP
-h_rc_co2_sls1 = []
-htot_rc_co2_sls1 = []
-co2_rc_co2_sls1 = []
-co2tot_rc_co2_sls1 = []
-cost_rc_co2_sls1 = []
-for section in section_list_rc_co2_sls1:
-    h_rc_co2_sls1.append(section.h)
-    htot_rc_co2_sls1.append(section.h+bodenaufbau_rc.h)
-    co2_rc_co2_sls1.append(section.co2)
-    co2tot_rc_co2_sls1.append(section.co2+bodenaufbau_rc.co2)
-    cost_rc_co2_sls1.append(section.cost)
-
-# create plot data: height of reinforced concrete sections, criterion ULS, optimized for minimal height
-h_rc_h = []
-htot_rc_h = []
-co2_rc_h = []
-co2tot_rc_h = []
-cost_rc_h = []
-for section in section_list_rc_h_uls:
-    h_rc_h.append(section.h)
-    htot_rc_h.append(section.h+bodenaufbau_rc.h)
-    co2_rc_h.append(section.co2)
-    co2tot_rc_h.append(section.co2+bodenaufbau_rc.co2)
-    cost_rc_h.append(section.cost)
-
+# plot figures
 plt.figure(1)
-plt.subplot(321)
-plt.plot(lengths, h_wd_h, 'b-', label="h, rectangular wood, criterion ULS, optimized for minimal h and minimal GWP")
-plt.plot(lengths, h_wd_h_sls1, 'b--', label="h, rectangular wood, criterion SLS, optimized for minimal h and "
-                                           "minimal GWP")
-plt.plot(lengths, h_rc_h, 'c-', label="h, rectangular reinforced concrete, criterion ULS, optimized for minimal h")
-plt.plot(lengths, h_rc_co2, 'g-', label="h, rectangular reinforced concrete, criterion ULS, optimized for minimal "
-                                       "GWP")
-plt.plot(lengths, h_rc_co2_sls1, 'g--', label="h, rectangular reinforced concrete, criterion SLS, optimized for "
-                                             "minimal GWP")
-plt.xlabel('l [m]')
-plt.ylabel('h [m]')
-plt.title('Height of Load Bearing Structure of Optimized Cross-section')
-plt.axis((4.0, 16.0, 0.0, 1.0))
-plt.legend()
-
-plt.subplot(322)
-plt.plot(lengths, htot_wd_h, 'b-', label="h_tot, rectangular wood, ULS, optimized for minimal h and minimal GWP")
-plt.plot(lengths, htot_wd_h_sls1, 'b--', label="h_tot, rectangular wood, SLS, optimized for minimal h and minimal "
-                                              "GWP")
-plt.plot(lengths, htot_rc_h, 'c-', label="h_tot, rectangular reinforced concrete, ULS, optimized for minimal h")
-plt.plot(lengths, htot_rc_co2, 'g-', label="h_tot, rectangular reinforced concrete, ULS, optimized for minimal "
-                                          "GWP")
-plt.plot(lengths, htot_rc_co2_sls1, 'g--', label="h_tot, rectangular reinforced concrete, SLS, optimized for "
-                                                "minimal GWP")
-plt.xlabel('l [m]')
-plt.ylabel('h [m]')
-plt.title('Height of Floor System with Optimized Cross-section')
-plt.axis((4, 16, 0, 1.0))
-plt.legend()
-
-plt.subplot(323)
-plt.plot(lengths, co2_wd_h, 'b-', label="rectangular wood, ULS, optimized for minimal h and minimal GWP")
-plt.plot(lengths, co2_wd_h_sls1, 'b--', label="rectangular wood, SLS, optimized for minimal h and minimal GWP")
-plt.plot(lengths, co2_rc_h, 'c-', label="rectangular reinforced concrete, ULS, optimized for minimal h")
-plt.plot(lengths, co2_rc_co2, 'g-', label="rectangular reinforced concrete, ULS, optimized for minimal GWP")
-plt.plot(lengths, co2_rc_co2_sls1, 'g--', label="rectangular reinforced concrete, SLS, optimized for minimal GWP")
-plt.xlabel('l [m]')
-plt.ylabel('GWP [kg-CO2-eq / m2]')
-plt.title('Global Warming Potential of Load Bearing Structure with Optimized Cross-section')
-plt.axis((4, 16, 0, 200))
-plt.legend()
-
-plt.subplot(324)
-plt.plot(lengths, co2tot_wd_h, 'b-', label="rectangular wood,  ULS, optimized for minimal h and minimal GWP")
-plt.plot(lengths, co2tot_wd_h_sls1, 'b--', label="rectangular wood, criterion SLS, optimized for minimal h and "
-                                                "minimal GWP")
-plt.plot(lengths, co2tot_rc_h, 'c-', label="rectangular reinforced concrete, ULS, optimized for minimal h")
-plt.plot(lengths, co2tot_rc_co2, 'g-', label="rectangular reinforced concrete, ULS, optimized for minimal GWP")
-plt.plot(lengths, co2tot_rc_co2_sls1, 'g--', label="rectangular reinforced concrete, SLS, optimized for minimal GWP")
-plt.xlabel('l [m]')
-plt.ylabel('GWP [kg-CO2-eq / m2]')
-plt.title('Global Warming Potential of Floor System with Optimized Cross-section')
-plt.axis((4, 16, 0, 200))
-plt.legend()
-
-
-plt.subplot(325)
-plt.plot(lengths, cost_wd_h, 'b-', label="rectangular wood,  ULS, optimized for minimal h and minimal GWP")
-plt.plot(lengths, cost_wd_h_sls1, 'b--', label="rectangular wood, criterion SLS, optimized for minimal h and "
-                                              "minimal GWP")
-plt.plot(lengths, cost_rc_h, 'c-', label="rectangular reinforced concrete, ULS, optimized for minimal h")
-plt.plot(lengths, cost_rc_co2, 'g-', label="rectangular reinforced concrete, ULS, optimized for minimal GWP")
-plt.plot(lengths, cost_rc_co2_sls1, 'g--', label="rectangular reinforced concrete, SLS, optimized for minimal GWP")
-plt.xlabel('l [m]')
-plt.ylabel('Cost [CHF / m2]')
-plt.title('Cost of Floor System with Optimized Cross-section')
-plt.axis((4, 16, 0, 800))
-plt.legend()
+data_max = [0, 0, 0, 0, 0, 0]
+for i, members in enumerate(member_list):
+    plotdata = [[], [], [], [], []]
+    for mem in members:
+        plotdata[0].append(mem.section.h)
+        plotdata[1].append(mem.section.h + mem.floorstruc.h)
+        plotdata[2].append(mem.section.co2)
+        plotdata[3].append(mem.section.co2 + mem.floorstruc.co2)
+        plotdata[4].append(mem.section.cost + mem.floorstruc.co2)
+    sec_typ, cri, opt = legend[i]
+    # set line color
+    if sec_typ == "rc_rec":
+        color = "tab:green"  # color for reinforced concrete
+    elif sec_typ == "wd_rec":
+        color = "tab:brown"  # color for wood
+    else:
+        color = "k"
+    # set linestyle
+    if cri == "ULS":
+        linestyle = "-"  # line style for ULS
+    elif cri == "SLS1":
+        linestyle = "--"  # line style for SLS1
+    else:
+        linestyle = ""
+    # set linewidth
+    if opt == "h":
+        linewidth = 0.5
+    elif opt == "GWP":
+        linewidth = 1.0
+    else:
+        linewidth = 0.1
+    label = sec_typ + ", " + cri + ", optimized for " + opt
+#    for j, pl in enumerate(plotted_data):
+    for idx, data in enumerate(plotdata):
+        plt.subplot(3, 2, idx + 1)
+        plt.plot(lengths, data, color=color, linestyle=linestyle, linewidth=linewidth, label=label)
+        data_max[idx] = max(data_max[idx], max(data))
+for idx, info in enumerate(plotted_data):
+    plt.subplot(3, 2, idx + 1)
+    plt.xlabel('l [m]')
+#    plt.title(info[0])
+    plt.ylabel(info[0] + " " + info[1])
+    if idx % 2 == 0:
+        plt.axis((min(lengths), max(lengths), 0, max(data_max[idx], data_max[idx+1])))
+    else:
+        plt.axis((min(lengths), max(lengths), 0, max(data_max[idx], data_max[idx-1])))
+    plt.legend()
 plt.show()
+
+#isolate cross-sections for verification
+idx_length = 5
+v_members = [member[5] for member in member_list]
+
+for idx, member in enumerate(v_members):
+    print(legend[idx])
+    print("Section Nr. " + str(idx) + " :")
+    print(member.section.section_type)
+    print("admissible load:")
+    member.calc_qk_zul_gzt()
+    print(member.qk_zul_gzt)
+    print("x/d:")
+    print(member.section.x_p/member.section.d)
+    print("Admissible deflections (ductile installations):")
+    print(member.w_install_adm)
+    print("Calculated deflections (ductile installations):")
+    print(member.w_install)
+
+
+
+print("Do manual verification of the data in v_members")
+
+print("End of code")
