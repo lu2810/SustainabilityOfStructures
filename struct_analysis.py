@@ -174,7 +174,7 @@ class RectangularWood(SupStrucRectangular):
 class RectangularConcrete(SupStrucRectangular):
     # defines properties of rectangular, reinforced concrete cross-section
     def __init__(self, concrete_type, rebar_type, b, h, di_xu, s_xu, di_xo, s_xo, phi=2.0, c_nom=0.03):
-        # create a rectangular timber object
+        # create a rectangular concrete object
         super().__init__(b, h, phi)
         self.concrete_type = concrete_type
         self.rebar_type = rebar_type
