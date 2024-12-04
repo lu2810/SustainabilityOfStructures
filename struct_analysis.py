@@ -116,7 +116,7 @@ class SteelReinforcingBar:
 class SupStrucRectangular:
     # defines cross-section dimensions and has methods to calculate static properties of rectangular,
     # non-cracked sections
-    def __init__(self, b, h, phi=0):  # create a rectangular timber object
+    def __init__(self, b, h, phi=0):
         self.b = b  # width [m]
         self.h = h  # height [m]
         self.a_brutt = self.calc_area()
@@ -166,7 +166,7 @@ class RectangularWood(SupStrucRectangular):
         self.vu = vu_el
         self.qs_class_n, self.qs_class_p = [3, 3]
         self.g0k = self.calc_weight(wood_type.weight)
-        self.ei1 = self.wood_type.Emmean*self.iy  # elastic stiffness concrete (uncracked behaviour) [Nm^2]
+        self.ei1 = self.wood_type.Emmean*self.iy  # elastic stiffness wood [Nm^2]
         self.co2 = self.a_brutt * self.wood_type.GWP * self.wood_type.density  # [kg_CO2_eq/m]
         self.cost = self.a_brutt * self.wood_type.cost
 
