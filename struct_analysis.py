@@ -100,23 +100,26 @@ class SteelReinforcingBar:
         self.fsd = self.fsk/gamma_s  # SIA 262, 2.3.2.5, Formel (4)
 
 
-# class Section:
-#     # contains section properties like weight, resistance and stiffness
-#     def __init__(self):  # create a general section object
-#         self.mu_max = float
-#         self.mu_min = float
-#         self.vu = float
-#         self.qs_class_n = int
-#         self.qs_class_p = int
-#         self.g0k = float
-#         self.ei1 = float
-#         self.co2 = float
-#         self.cost = float
+class Section:
+    # contains fundamental section properties like sectoion type weight, resistance and stiffness
+    def __init__(self, section_type):
+        self.section_type = section_type
+        # self.mu_max = float
+        # self.mu_min = float
+        # self.vu = float
+        # self.qs_class_n = int
+        # self.qs_class_p = int
+        # self.g0k = float
+        # self.ei1 = float
+        # self.co2 = float
+        # self.cost = float
 
-class SupStrucRectangular:
+
+class SupStrucRectangular(Section):
     # defines cross-section dimensions and has methods to calculate static properties of rectangular,
     # non-cracked sections
-    def __init__(self, b, h, phi=0):  # create a rectangular timber object
+    def __init__(self, section_type, b, h, phi=0):  # create a rectangular timber object
+        super().__init__(section_type)
         self.b = b  # width [m]
         self.h = h  # height [m]
         self.a_brutt = self.calc_area()
@@ -156,10 +159,11 @@ class SupStrucRectangular:
         return w
 
 
-class RectangularWood(SupStrucRectangular):
+class RectangularWood(SupStrucRectangular, Section):
     # defines properties of rectangular, wooden cross-section
     def __init__(self, wood_type, b, h, phi=0.6):  # create a rectangular timber object
-        super().__init__(b, h, phi)
+        section_type = "wd_rec"
+        super().__init__(section_type, b, h, phi)
         self.wood_type = wood_type
         mu_el, vu_el = self.calc_strength_elast(wood_type.fmd, wood_type.fvd)
         self.mu_max, self.mu_min = [mu_el, mu_el]
@@ -175,7 +179,8 @@ class RectangularConcrete(SupStrucRectangular):
     # defines properties of rectangular, reinforced concrete cross-section
     def __init__(self, concrete_type, rebar_type, b, h, di_xu, s_xu, di_xo, s_xo, phi=2.0, c_nom=0.03):
         # create a rectangular timber object
-        super().__init__(b, h, phi)
+        section_type = "rc_rec"
+        super().__init__(section_type, b, h, phi)
         self.concrete_type = concrete_type
         self.rebar_type = rebar_type
         self.c_nom = c_nom
@@ -222,7 +227,7 @@ class RectangularConcrete(SupStrucRectangular):
         x = omega * d / 0.85  # [m]
         if x/d <= 0.35:
             return mu, x, a_s, 1
-        if x/d <= 0.5:
+        elif x/d <= 0.5:
             return mu, x, a_s, 2
         else:
             return mu, x, a_s, 99  # Querschnitt hat ungenügendes Verformungsvermögen
@@ -271,12 +276,12 @@ class BeamSimpleSup:
         self.l_tot = length
         self.li_max = self.l_tot  # max span (used for calculation of admissible deflections)
         self.alpha_m = [0, 1/8]
-        self.qs_cl_erf = [99, 99]  # Querschnittsklasse: 1 == plast, 99 == keine Anforderung (elast)
+        self.qs_cl_erf = [3, 3]  # Querschnittsklasse: 1 == PP, 2 == EP, 3 == EE
         self.alpha_w = 5/384
 
 
 class Member1D:
-    def __init__(self, section, system, floorstruc, requirements, g2k=0.0, qk=2.0, psi0=0.7, psi1=0.5, psi2=0.3):
+    def __init__(self, section, system, floorstruc, requirements, g2k=0.0, qk=2e3, psi0=0.7, psi1=0.5, psi2=0.3):
         self.section = section
         self.system = system
         self.floorstruc = floorstruc
