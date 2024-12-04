@@ -211,7 +211,7 @@ class RectangularConcrete(SupStrucRectangular):
         else:
             [mu, x, a_s, qs_klasse] = [0, 0, 0, 0]
             print("sigen of moment resistance has to be 'neg' or 'pos'")
-        return mu, x, a_s, qs_klasse
+        return mu, x, a_s, qs_klasse    #ReadMe: ok mit Querschnittsklasse, aber nicht intuitiv mit 1, 2, 99... braucht aus meiner Sicht Erklärung im Code
 
     @staticmethod
     def mu_unsigned(di, s, d, b, fsd, fcd):
