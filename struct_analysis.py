@@ -162,9 +162,9 @@ class RectangularWood(SupStrucRectangular):
         super().__init__(b, h, phi)
         self.wood_type = wood_type
         mu_el, vu_el = self.calc_strength_elast(wood_type.fmd, wood_type.fvd)
-        self.mu_max, self.mu_min = [mu_el, mu_el]
+        self.mu_max, self.mu_min = [mu_el, mu_el]     #ReadMe: what is this used for
         self.vu = vu_el
-        self.qs_class_n, self.qs_class_p = [3, 3]     #what is this used for in wood?
+        self.qs_class_n, self.qs_class_p = [3, 3]     #ReadMe: what is this used for in wood?
         self.g0k = self.calc_weight(wood_type.weight)
         self.ei1 = self.wood_type.Emmean*self.iy  # elastic stiffness wood [Nm^2]
         self.co2 = self.a_brutt * self.wood_type.GWP * self.wood_type.density  # [kg_CO2_eq/m]
